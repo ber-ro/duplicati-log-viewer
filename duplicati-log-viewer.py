@@ -16,7 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 # USA
 
-from timeit import default_timer as timer
+from collections import deque
 from tkinter import *
 from tkinter import ttk
 import re
@@ -24,13 +24,10 @@ import sys
 
 
 def main():
-    start = timer()
     createGui()
     readLog()
-    end = timer()
     setFocus()
     root.mainloop()
-    print("log_viewer: {end-start} seconds")
 
 
 def createGui():
@@ -68,8 +65,7 @@ def copy(event):
 class DuplicatiLogTree:
     def __init__(self, tree):
         self.tree = tree
-        self.lines = {}
-        self.date = None
+        self.queue = deque()
 
     def __enter__(self):
         return self
@@ -78,23 +74,25 @@ class DuplicatiLogTree:
         self.fillTree()
 
     def addBackup(self, date):
-        self.fillTree()
-        self.date = date
-        self.lines = {}
+        if len(self.queue) > 5:
+            self.queue.popleft()
+        self.queue.append({'date': date, 'lines': {}})
 
     def fillTree(self):
-        if self.date is None or len(self.lines) == 0:
-            return
-        parent = self.tree.insert("", 'end', text=self.date)
-        for tag in sorted(self.lines):
-            parent2 = self.tree.insert(parent, 'end', text=tag)
-            for f in sorted(self.lines[tag]):
-                self.tree.insert(parent2, 'end', text=f)
+        for backup in self.queue:
+            parent = self.tree.insert("", 'end', text=backup['date'])
+            for tag in sorted(backup['lines']):
+                parent2 = self.tree.insert(parent, 'end', text=tag)
+                for f in sorted(backup['lines'][tag]):
+                    self.tree.insert(parent2, 'end', text=f)
 
     def addLine(self, tag, text):
-        if self.lines.get(tag) is None:
-            self.lines[tag] = set()
-        self.lines[tag].add(text)
+        if len(self.queue) == 0:
+            return
+        lines = self.queue[-1]['lines']
+        if lines.get(tag) is None:
+            lines[tag] = set()
+        lines[tag].add(text)
 
 
 def readLog():
@@ -103,27 +101,18 @@ def readLog():
             for line in fh:
                 yield line
 
-    totalOperations = 0
     reStarting = "^(.*) \[Information-Duplicati.Library.Main.Controller-StartingOperation\]"
-    for line in lines():
-        match = re.search(reStarting, line)
-        if match is not None:
-            totalOperations += 1
 
-    i = 0
     with DuplicatiLogTree(tree) as logTree:
         for line in lines():
             match = re.search(reStarting, line)
             if match is not None:
-                i += 1
-                if i > totalOperations - 5:
-                    logTree.addBackup(match[1])
+                logTree.addBackup(match[1])
                 continue
 
-            if i > totalOperations - 5:
-                match = re.search("\[([^\]]*)\]: (.*)", line)
-                if (match is not None):
-                    logTree.addLine(match[1], match[2])
+            match = re.search("\[([^\]]*)\]: (.*)", line)
+            if (match is not None):
+                logTree.addLine(match[1], match[2])
 
 
 main()
