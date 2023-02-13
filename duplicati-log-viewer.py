@@ -98,18 +98,32 @@ class DuplicatiLogTree:
 
 
 def readLog():
-    with (DuplicatiLogTree(tree) as logTree,
-          open(sys.argv[1], "r", encoding="utf8") as fh):
-        for line in fh:
-            regex = "^(.*) \[Information-Duplicati.Library.Main.Controller-StartingOperation\]"
-            match = re.search(regex, line)
+    def lines():
+        with open(sys.argv[1], "r", encoding="utf8") as fh:
+            for line in fh:
+                yield line
+
+    totalOperations = 0
+    reStarting = "^(.*) \[Information-Duplicati.Library.Main.Controller-StartingOperation\]"
+    for line in lines():
+        match = re.search(reStarting, line)
+        if match is not None:
+            totalOperations += 1
+
+    i = 0
+    with DuplicatiLogTree(tree) as logTree:
+        for line in lines():
+            match = re.search(reStarting, line)
             if match is not None:
-                logTree.addBackup(match[1])
+                i += 1
+                if i > totalOperations - 5:
+                    logTree.addBackup(match[1])
                 continue
 
-            match = re.search("\[([^\]]*)\]: (.*)", line)
-            if (match is not None):
-                logTree.addLine(match[1], match[2])
+            if i > totalOperations - 5:
+                match = re.search("\[([^\]]*)\]: (.*)", line)
+                if (match is not None):
+                    logTree.addLine(match[1], match[2])
 
 
 main()
