@@ -19,11 +19,14 @@
 from collections import deque
 from tkinter import *
 from tkinter import ttk
+import os
 import re
 import sys
+import yaml
 
 
 def main():
+    loadCfg()
     createGui()
     readLog()
     setFocus()
@@ -74,7 +77,8 @@ class DuplicatiLogTree:
         self.fillTree()
 
     def addBackup(self, date):
-        if len(self.queue) > 5:
+        max = cfg.get("show-logs-number") or 10
+        if max != 0 and len(self.queue) >= max:
             self.queue.popleft()
         self.queue.append({'date': date, 'lines': {}})
 
@@ -111,8 +115,50 @@ def readLog():
                 continue
 
             match = re.search("\[([^\]]*)\]: (.*)", line)
-            if (match is not None):
+            if (match is not None and not isIgnored(match[2])):
                 logTree.addLine(match[1], match[2])
+
+
+def isIgnored(text):
+    for regex in cfg.get("ignore-exclude"):
+        pattern = "".join(["Excluding path due to filter: ", regex, " => \(.*\)"])
+        if re.fullmatch(pattern, text):
+            return True
+
+
+def getInitfile():
+    def checkPath(var, subdir):
+        if var:
+            val = os.environ.get(var)
+            if val is None:
+                return None
+        else:
+            val = ""
+        path = val + subdir
+        return path if os.path.isfile(path) else None
+
+    return (
+        checkPath("XDG_CONFIG_HOME", "/duplicati-log-viewer/config.yaml")
+        or checkPath("HOME", "/.config/duplicati-log-viewer/config.yaml")
+        or checkPath("HOME", "/.duplicati-log-viewer.yaml")
+        or checkPath(None, os.path.dirname(os.path.realpath(__file__)) + "/.duplicati-log-viewer.yaml")
+    )
+
+
+def loadCfg():
+    global cfg
+    ini = getInitfile()
+    if ini:
+        with open(ini, "r") as stream:
+            cfg = yaml.safe_load(stream)
+    else:
+        cfg = {}
+    old = cfg.get("ignore-exclude")
+    new = []
+    # automatically extend in regex '/' to '[/\\]' and '^/' to '[^/\\]'
+    for regex in old or []:
+        new.append(re.sub(r"(\^?)/", r"[\1/\\\\]", regex))
+    cfg["ignore-exclude"] = new
 
 
 main()
