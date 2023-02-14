@@ -121,8 +121,7 @@ def readLog():
 
 def isIgnored(text):
     for regex in cfg.get("ignore-exclude"):
-        pattern = "".join(["Excluding path due to filter: ", regex, " => \(.*\)"])
-        if re.fullmatch(pattern, text):
+        if re.fullmatch(regex, text):
             return True
 
 
@@ -157,7 +156,9 @@ def loadCfg():
     new = []
     # automatically extend in regex '/' to '[/\\]' and '^/' to '[^/\\]'
     for regex in old or []:
-        new.append(re.sub(r"(\^?)/", r"[\1/\\\\]", regex))
+        regex = re.sub(r"(\^?)/", r"[\1/\\\\]", regex)
+        regex = "".join(["Excluding path due to filter: ", regex, " => \(.*\)"])
+        new.append(regex)
     cfg["ignore-exclude"] = new
 
 
