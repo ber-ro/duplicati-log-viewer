@@ -1,0 +1,12 @@
+---
+show-logs-number: 5
+ignore-exclude:
+  - .*\.[lL][oO][gG]\.?[0-9]*
+  - .*\.(aux|elc|dmp|ttf|pid)
+  - .*/auto/.*\.el
+  - .*/[dD]esktop.ini
+  - .*/node_modules/
+  - .*/AppData/(Local|LocalLow|Roaming)/^/+/
+  - .*/Documents/^/+/
+  - .*/\.?cache/
+  - (?i:.*/ntuser\.(ini|dat.*))
