@@ -139,7 +139,6 @@ def getInitfile():
     return (
         checkPath("XDG_CONFIG_HOME", "/duplicati-log-viewer/config.yaml")
         or checkPath("HOME", "/.config/duplicati-log-viewer/config.yaml")
-        or checkPath("HOME", "/.duplicati-log-viewer.yaml")
         or checkPath(None, os.path.dirname(os.path.realpath(__file__)) + "/.duplicati-log-viewer.yaml")
     )
 
@@ -152,10 +151,9 @@ def loadCfg():
             cfg = yaml.safe_load(stream)
     else:
         cfg = {}
-    old = cfg.get("ignore-exclude")
     new = []
     # automatically extend in regex '/' to '[/\\]' and '^/' to '[^/\\]'
-    for regex in old or []:
+    for regex in cfg.get("ignore-exclude") or []:
         regex = re.sub(r"(\^?)/", r"[\1/\\\\]", regex)
         regex = "".join(["Excluding path due to filter: ", regex, " => \(.*\)"])
         new.append(regex)
