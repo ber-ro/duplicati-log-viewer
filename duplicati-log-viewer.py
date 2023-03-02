@@ -115,13 +115,13 @@ def readLog():
             for line in fh:
                 yield line
 
-    reStarting = "^(.*) \[Information-Duplicati.Library.Main.Controller-StartingOperation\]"
+    reStarting = "^(.*?) *-? *\[.*-StartingOperation\](.*)"
 
     with DuplicatiLogTree(tree) as logTree:
         for line in lines():
             match = re.search(reStarting, line)
             if match is not None:
-                logTree.addBackup(match[1])
+                logTree.addBackup(match[1] + match[2])
                 continue
 
             match = re.search("\[([^\]]*)\]: (.*)", line)
