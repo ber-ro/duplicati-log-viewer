@@ -19,13 +19,22 @@
 from collections import deque
 from tkinter import *
 from tkinter import ttk
+import argparse
 import os
 import re
-import sys
 import yaml
 
 
 def main():
+    op = os.environ.get("DUPLICATI__OPERATIONNAME")
+    if op is not None and op != "Backup":
+        return  # do not run on operation List when restoring
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'logfile', nargs='?', default=os.environ.get("DUPLICATI__log_file")
+    )
+    global args
+    args = parser.parse_args()
     loadCfg()
     createGui()
     readLog()
@@ -101,7 +110,7 @@ class DuplicatiLogTree:
 
 def readLog():
     def lines():
-        with open(sys.argv[1], "r", encoding="utf8") as fh:
+        with open(args.logfile, "r", encoding="utf8") as fh:
             for line in fh:
                 yield line
 
