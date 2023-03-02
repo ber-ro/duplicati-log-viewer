@@ -45,6 +45,7 @@ def main():
 def createGui():
     global root, tree
     root = Tk()
+    root.title(os.path.basename(os.path.realpath(__file__)))
     root.grid_rowconfigure(0, weight=1)
     root.grid_columnconfigure(0, weight=1)
     tree = ttk.Treeview(root, height=40, show="tree")
