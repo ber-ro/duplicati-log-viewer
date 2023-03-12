@@ -102,7 +102,8 @@ class DuplicatiLogTree:
             for tag in sorted(backup['lines']):
                 parent2 = self.tree.insert(parent, 'end', text=tag)
                 for f in sorted(backup['lines'][tag]):
-                    self.tree.insert(parent2, 'end', text=f)
+                    if not isIgnored(f):
+                        self.tree.insert(parent2, 'end', text=f)
 
     def addLine(self, tag, text):
         if len(self.queue) == 0:
@@ -128,7 +129,7 @@ def readLog():
                 continue
 
             match = re.search("\[(.*)\]: (.*)", line)
-            if (match is not None and not isIgnored(match[2])):
+            if (match is not None):
                 logTree.addLine(match[1], match[2])
 
 
