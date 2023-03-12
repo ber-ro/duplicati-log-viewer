@@ -1,4 +1,4 @@
-# Structure Duplicati log file as tree view
+# Browse Duplicati log files
 # Copyright (C) 2022 Bernhard Rotter <bernhard.rotter@gmail.com>
 
 # This library is free software; you can redistribute it and/or
@@ -38,57 +38,116 @@ def main():
     global args
     args = parser.parse_args()
     loadCfg()
-    createGui()
-    readLog()
-    setFocus()
+    gui = Gui(readLog())
     t1 = time.process_time()
     print("Start-up time:", t1 - t0, "seconds")
-    root.mainloop()
+    gui.root.mainloop()
 
 
-def createGui():
-    global root, tree
-    root = Tk()
-    root.title(os.path.basename(os.path.realpath(__file__)))
-    root.grid_rowconfigure(0, weight=1)
-    root.grid_columnconfigure(0, weight=1)
-    tree = ttk.Treeview(root, height=40, show="tree")
-    tree.column("#0", width=900, minwidth=2000)  # minwidth: horizontal scroll
-    tree.grid(column=0, row=0, sticky="nsew")
-    tree.bind('<Control-c>', copy)
+class Gui:
+    def __init__(self, logData):
+        self.logData = logData
+        self.state = []
+        self.root = Tk()
+        self.root.title(os.path.basename(os.path.realpath(__file__)))
+        self.root.geometry("1200x800")
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
-    tree_yscroll = ttk.Scrollbar(root, orient=VERTICAL, command=tree.yview)
-    tree_xscroll = ttk.Scrollbar(root, orient=HORIZONTAL, command=tree.xview)
-    tree_yscroll.grid(row=0, column=1, sticky="ns")
-    tree_xscroll.grid(row=1, column=0, sticky="ew")
-    tree.configure(yscrollcommand=tree_yscroll.set,
-                   xscrollcommand=tree_xscroll.set)
+        self.label = Label(self.root, anchor=W)
+        self.lsbox = Listbox(self.root, activestyle=NONE)
+        self.textw = Text(self.root, wrap=NONE, font=("Arial", 9))
+        self.yscrl = ttk.Scrollbar(self.root, orient=VERTICAL)
+        self.xscrl = ttk.Scrollbar(self.root, orient=HORIZONTAL)
+
+        self.label.grid(row=0, column=0, sticky="nsew")
+        self.lsbox.grid(row=1, column=0, sticky="nsew")
+        self.textw.grid(row=1, column=0, sticky="nsew")
+        self.yscrl.grid(row=1, column=1, sticky="ns")
+        self.xscrl.grid(row=2, column=0, sticky="ew")
+        self.textw.grid_remove()
+
+        self.lsbox.bind("<Key>", self.keyhandler)
+        self.textw.bind("<Key>", self.keyhandler)
+        # tree.bind('<Control-c>', copy)
+
+        self.fillBackups()
+        self.select(0)
+        self.scrollbars(self.lsbox)
+
+    def keyhandler(self, event):
+        if event.keysym == 'Return' or event.keysym == 'Right':
+            selected = self.lsbox.curselection()
+            if len(selected) == 0:
+                return
+            current = self.lsbox.get(selected[0])
+            if len(self.state) == 0:
+                self.newState([current])
+                self.lsbox.delete(0, END)
+                for t in sorted(self.logData.backups[current]):
+                    self.lsbox.insert(END, t)
+                self.select(0)
+            elif len(self.state) == 1:
+                self.newState([self.state[0], current])
+                self.lsbox.grid_remove()
+                self.textw.grid()
+                self.textw.focus_set()
+                self.textw.delete('1.0', END)
+                self.scrollbars(self.textw)
+                for l in sorted(self.logData.backups[self.state[0]][current]):
+                    if not isIgnored(l):
+                        self.textw.insert(END, l)
+                        self.textw.insert(END, "\n")
+        elif event.keysym == 'Escape' or event.keysym == 'Left':
+            if len(self.state) == 1:
+                self.fillBackups(self.state[0])
+                self.newState([])
+            elif len(self.state) == 2:
+                self.textw.grid_remove()
+                self.lsbox.grid()
+                self.lsbox.focus_set()
+                self.scrollbars(self.lsbox)
+                self.newState([self.state[0]])
+
+    def newState(self, state):
+        self.state = state
+        self.label.config(text=" > ".join(state))
+
+    def fillBackups(self, current=None):
+        self.lsbox.delete(0, END)
+        for name, backup in sorted(self.logData.backups.items()):
+            self.lsbox.insert(0, name)
+            if name == current:
+                self.select(0)
+
+    def select(self, num):
+        self.lsbox.activate(num)
+        self.lsbox.select_set(num)  # This only sets focus on the first item.
+        self.lsbox.event_generate("<<ListboxSelect>>")
+        self.lsbox.focus_set()
+
+    def scrollbars(self, widget):
+        self.xscrl.config(command=widget.xview)
+        self.yscrl.config(command=widget.yview)
+        widget.configure(xscrollcommand=self.xscrl.set,
+                         yscrollcommand=self.yscrl.set)
 
 
-def setFocus():
-    tree.focus_set()
-    children = tree.get_children()
-    if children:
-        tree.focus(children[-1])
-        tree.selection_set(children[-1])
+# def copy(event):
+#     # values = [tree.item(i, 'text') for i in tree.selection()]
+#     root.clipboard_clear()
+#     # root.clipboard_append("\n".join(values))
 
 
-def copy(event):
-    values = [tree.item(i, 'text') for i in tree.selection()]
-    root.clipboard_clear()
-    root.clipboard_append("\n".join(values))
-
-
-class DuplicatiLogTree:
-    def __init__(self, tree):
-        self.tree = tree
+class DuplicatiLogData:
+    def __init__(self, ):
         self.queue = deque()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.fillTree()
+        self.prepareData()
 
     def addBackup(self, date):
         max = cfg.get("show-logs-number") or 10
@@ -96,14 +155,10 @@ class DuplicatiLogTree:
             self.queue.popleft()
         self.queue.append({'date': date, 'lines': {}})
 
-    def fillTree(self):
-        for backup in self.queue:
-            parent = self.tree.insert("", 'end', text=backup['date'])
-            for tag in sorted(backup['lines']):
-                parent2 = self.tree.insert(parent, 'end', text=tag)
-                for f in sorted(backup['lines'][tag]):
-                    if not isIgnored(f):
-                        self.tree.insert(parent2, 'end', text=f)
+    def prepareData(self):
+        self.backups = {}
+        for b in self.queue:
+            self.backups[b['date']] = b['lines']
 
     def addLine(self, tag, text):
         if len(self.queue) == 0:
@@ -120,17 +175,19 @@ def readLog():
             for line in fh:
                 yield line
 
-    with DuplicatiLogTree(tree) as logTree:
+    with DuplicatiLogData() as logData:
         for line in lines():
             match = re.search("\[.*-StartingOperation\]", line)
             if match is not None:
                 match = re.search("^(.*?) *-? *\[.*-StartingOperation\](.*)", line)
-                logTree.addBackup(match[1] + match[2])
+                logData.addBackup(match[1] + match[2])
                 continue
 
             match = re.search("\[(.*)\]: (.*)", line)
             if (match is not None):
-                logTree.addLine(match[1], match[2])
+                logData.addLine(match[1], match[2])
+
+    return logData
 
 
 def isIgnored(text):
