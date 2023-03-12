@@ -22,10 +22,12 @@ from tkinter import ttk
 import argparse
 import os
 import re
+import time
 import yaml
 
 
 def main():
+    t0 = time.process_time()
     op = os.environ.get("DUPLICATI__OPERATIONNAME")
     if op is not None and op != "Backup":
         return  # do not run on operation List when restoring
@@ -39,6 +41,8 @@ def main():
     createGui()
     readLog()
     setFocus()
+    t1 = time.process_time()
+    print("Start-up time:", t1 - t0, "seconds")
     root.mainloop()
 
 
@@ -115,16 +119,15 @@ def readLog():
             for line in fh:
                 yield line
 
-    reStarting = "^(.*?) *-? *\[.*-StartingOperation\](.*)"
-
     with DuplicatiLogTree(tree) as logTree:
         for line in lines():
-            match = re.search(reStarting, line)
+            match = re.search("\[.*-StartingOperation\]", line)
             if match is not None:
+                match = re.search("^(.*?) *-? *\[.*-StartingOperation\](.*)", line)
                 logTree.addBackup(match[1] + match[2])
                 continue
 
-            match = re.search("\[([^\]]*)\]: (.*)", line)
+            match = re.search("\[(.*)\]: (.*)", line)
             if (match is not None and not isIgnored(match[2])):
                 logTree.addLine(match[1], match[2])
 
