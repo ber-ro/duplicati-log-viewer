@@ -153,6 +153,7 @@ def getInitfile():
     return (
         checkPath("XDG_CONFIG_HOME", "/duplicati-log-viewer/config.yaml")
         or checkPath("HOME", "/.config/duplicati-log-viewer/config.yaml")
+        or checkPath("USERPROFILE", "/.config/duplicati-log-viewer/config.yaml")
         or checkPath(None, os.path.dirname(os.path.realpath(__file__)) + "/.duplicati-log-viewer.yaml")
     )
 
