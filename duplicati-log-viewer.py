@@ -84,7 +84,7 @@ class Gui:
             if len(self.state) == 0:
                 self.newState([current])
                 self.lsbox.delete(0, END)
-                for t in sorted(self.logData.getTags(current)):
+                for t in self.logData.getTags(current):
                     self.lsbox.insert(END, t)
                 self.select(0)
             elif len(self.state) == 1:
@@ -95,7 +95,7 @@ class Gui:
                 self.textw.configure(state=NORMAL)
                 self.textw.delete('1.0', END)
                 self.scrollbars(self.textw)
-                for l in sorted(self.logData.backups[self.state[0]]['tags'][current]):
+                for l in self.logData.getTags(self.state[0])[current]:
                     if not isIgnored(l):
                         self.textw.insert(END, l)
                         self.textw.insert(END, "\n")
@@ -118,7 +118,7 @@ class Gui:
 
     def fillBackups(self, current=None):
         self.lsbox.delete(0, END)
-        for name, backup in sorted(self.logData.backups.items()):
+        for name in sorted(self.logData.backups):
             self.lsbox.insert(0, name)
             if name == current:
                 self.select(0)
@@ -174,6 +174,8 @@ class DuplicatiLogData:
                     if tags.get(tag) is None:
                         tags[tag] = set()
                     tags[tag].add(value)
+            for t in tags:
+                tags[t] = sorted(tags[t])
             struct['lines'] = None
         return tags
 
