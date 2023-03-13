@@ -69,6 +69,7 @@ class Gui:
 
         self.lsbox.bind("<Key>", self.keyhandler)
         self.textw.bind("<Key>", self.keyhandler)
+        self.textw.tag_configure('highlight', background='yellow')
         # tree.bind('<Control-c>', copy)
 
         self.fillBackups()
@@ -84,7 +85,7 @@ class Gui:
             if len(self.state) == 0:
                 self.newState([current])
                 self.lsbox.delete(0, END)
-                for t in self.logData.getTags(current):
+                for t in sorted(self.logData.getTags(current)):
                     self.lsbox.insert(END, t)
                 self.select(0)
             elif len(self.state) == 1:
@@ -97,7 +98,7 @@ class Gui:
                 self.scrollbars(self.textw)
                 for l in self.logData.getTags(self.state[0])[current]:
                     if not isIgnored(l):
-                        self.textw.insert(END, l)
+                        highlight_insert(self.textw, l)
                         self.textw.insert(END, "\n")
                 self.textw.delete("end-2c", END)  # delete last newline
                 self.textw.configure(state=DISABLED)
@@ -200,6 +201,40 @@ def readLog():
                 logData.addLine(line)
 
     return logData
+
+
+def highlight_insert(text, line):
+    try:
+        # raise RuntimeError
+        if not re.search('(Ex|In)cluding path due to filter: ', line):
+            raise RuntimeError
+        match = re.search('(.*(?:Ex|In)cluding path due to filter: )(.*)( => \()(.*)(\))', line)
+        if not match:
+            raise RuntimeError
+        pre, path, mid, pattern, post = match[1], match[2], match[3], match[4], match[5]
+        if match := re.fullmatch('\[(.*)\]', pattern):
+            regex = match[1]
+            regex = re.sub(r"^\.\*(/|\\\\)", "", regex)
+        else:
+            regex = pattern
+            # regex = re.sub(r"^\*(/|\\(?=[^\\]))", "", regex)
+            regex = re.sub(r"^\*(/|\\)", "", regex)
+            regex = re.sub(r"\\", r"\\\\", regex)
+            regex.replace("*", ".*")
+            regex.replace("?", ".")
+        # print(regex)
+        match = re.search(regex, path, re.IGNORECASE)
+        if not match:
+            raise RuntimeError
+        text.insert(END, pre)
+        text.insert(END, path[:match.start()])
+        text.insert(END, path[match.start():match.end()], "highlight")
+        text.insert(END, path[match.end():])
+        text.insert(END, mid)
+        text.insert(END, pattern)
+        text.insert(END, post)
+    except:
+        text.insert(END, line)
 
 
 def isIgnored(text):
