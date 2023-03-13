@@ -92,12 +92,15 @@ class Gui:
                 self.lsbox.grid_remove()
                 self.textw.grid()
                 self.textw.focus_set()
+                self.textw.configure(state=NORMAL)
                 self.textw.delete('1.0', END)
                 self.scrollbars(self.textw)
                 for l in sorted(self.logData.backups[self.state[0]]['tags'][current]):
                     if not isIgnored(l):
                         self.textw.insert(END, l)
                         self.textw.insert(END, "\n")
+                self.textw.delete("end-2c", END)  # delete last newline
+                self.textw.configure(state=DISABLED)
         elif event.keysym == 'Escape' or event.keysym == 'Left':
             if len(self.state) == 1:
                 self.fillBackups(self.state[0])
@@ -164,7 +167,6 @@ class DuplicatiLogData:
         struct = self.backups[backup]
         tags, lines = struct['tags'], struct['lines']
         if lines:
-            print("getTags")
             for l in lines:
                 match = re.search("\[(.*)\]: (.*)", l)
                 if (match):
