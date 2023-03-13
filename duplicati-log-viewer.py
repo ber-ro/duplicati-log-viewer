@@ -84,7 +84,7 @@ class Gui:
             if len(self.state) == 0:
                 self.newState([current])
                 self.lsbox.delete(0, END)
-                for t in sorted(self.logData.backups[current]):
+                for t in sorted(self.logData.getTags(current)):
                     self.lsbox.insert(END, t)
                 self.select(0)
             elif len(self.state) == 1:
@@ -94,7 +94,7 @@ class Gui:
                 self.textw.focus_set()
                 self.textw.delete('1.0', END)
                 self.scrollbars(self.textw)
-                for l in sorted(self.logData.backups[self.state[0]][current]):
+                for l in sorted(self.logData.backups[self.state[0]]['tags'][current]):
                     if not isIgnored(l):
                         self.textw.insert(END, l)
                         self.textw.insert(END, "\n")
@@ -150,23 +150,34 @@ class DuplicatiLogData:
         self.prepareData()
 
     def addBackup(self, date):
-        max = cfg.get("show-logs-number") or 10
+        max = cfg.get("show-logs-number") or 0
         if max != 0 and len(self.queue) >= max:
             self.queue.popleft()
-        self.queue.append({'date': date, 'lines': {}})
+        self.queue.append({'date': date, 'lines': [], 'tags': {}})
 
     def prepareData(self):
         self.backups = {}
         for b in self.queue:
-            self.backups[b['date']] = b['lines']
+            self.backups[b['date']] = b
 
-    def addLine(self, tag, text):
-        if len(self.queue) == 0:
-            return
-        lines = self.queue[-1]['lines']
-        if lines.get(tag) is None:
-            lines[tag] = set()
-        lines[tag].add(text)
+    def getTags(self, backup):
+        struct = self.backups[backup]
+        tags, lines = struct['tags'], struct['lines']
+        if lines:
+            print("getTags")
+            for l in lines:
+                match = re.search("\[(.*)\]: (.*)", l)
+                if (match):
+                    tag, value = match[1], match[2]
+                    if tags.get(tag) is None:
+                        tags[tag] = set()
+                    tags[tag].add(value)
+            struct['lines'] = None
+        return tags
+
+    def addLine(self, text):
+        if len(self.queue) != 0:
+            self.queue[-1]['lines'].append(text)
 
 
 def readLog():
@@ -181,11 +192,8 @@ def readLog():
             if match is not None:
                 match = re.search("^(.*?) *-? *\[.*-StartingOperation\](.*)", line)
                 logData.addBackup(match[1] + match[2])
-                continue
-
-            match = re.search("\[(.*)\]: (.*)", line)
-            if (match is not None):
-                logData.addLine(match[1], match[2])
+            else:
+                logData.addLine(line)
 
     return logData
 

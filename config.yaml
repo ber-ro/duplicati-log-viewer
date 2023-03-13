@@ -1,5 +1,5 @@
 ---
-show-logs-number: 5
+#show-logs-number: 5
 ignore-exclude:
   - .*\.[lL][oO][gG]\.?[0-9]*
   - .*\.(aux|elc|dmp|ttf|pid)
