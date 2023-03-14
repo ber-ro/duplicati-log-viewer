@@ -56,7 +56,7 @@ class Gui:
 
         self.label = Label(self.root, anchor=W)
         self.lsbox = Listbox(self.root, activestyle=NONE)
-        self.textw = Text(self.root, wrap=NONE, font=("Arial", 9))
+        self.textw = Text(self.root, wrap=NONE, font=("Arial", 9), relief=SOLID)
         self.yscrl = ttk.Scrollbar(self.root, orient=VERTICAL)
         self.xscrl = ttk.Scrollbar(self.root, orient=HORIZONTAL)
 
