@@ -55,37 +55,40 @@ class Gui:
         self.root.grid_columnconfigure(0, weight=1)
 
         self.title = Frame(self.root)
-        style = {'anchor': W, 'relief': FLAT, 'bg': 'gray40', 'fg': '#ffffff'}
-        self.lb = [
-            Label(self.title, **style),
-            Label(self.title, **style),
-            Label(self.title,),
-        ]
         self.lsbox = Listbox(self.root, activestyle=NONE)
         self.textw = Text(self.root, wrap=NONE, font=("Arial", 9), relief=SOLID)
         self.yscrl = ttk.Scrollbar(self.root, orient=VERTICAL)
         self.xscrl = ttk.Scrollbar(self.root, orient=HORIZONTAL)
 
-        self.lb[0].grid(row=0, column=0, sticky="nsew")
-        self.lb[1].grid(row=0, column=1, sticky="nsew", padx=10)
-        self.lb[2].grid(row=0, column=2, sticky="nsew", padx=10)
         self.title.grid(row=0, column=0, columnspan=2, sticky="nsew")
         self.lsbox.grid(row=1, column=0, sticky="nsew")
         self.textw.grid(row=1, column=0, sticky="nsew")
         self.yscrl.grid(row=1, column=1, sticky="ns")
         self.xscrl.grid(row=2, column=0, sticky="ew")
         self.textw.grid_remove()
-        self.lb[0].grid_remove()
-        self.lb[1].grid_remove()
 
         self.lsbox.bind("<Key>", self.keyhandler)
         self.textw.bind("<Key>", self.keyhandler)
         self.textw.tag_configure('highlight', background='yellow')
-        # tree.bind('<Control-c>', copy)
 
+        self.newState([])
         self.fillBackups()
         self.select(0)
         self.scrollbars(self.lsbox)
+
+    def newState(self, state):
+        self.state = state
+        try:
+            for l in self.labels:
+                l.destroy()
+        except:
+            pass
+        self.labels = []
+
+        for i in ["/"] + [i for j in state for i in [j, "/"]]:
+            lb = Label(self.title, text=i, anchor=W, relief=FLAT, bg='gray40', fg='#ffffff')
+            lb.pack(side='left', padx=1)
+            self.labels.append(lb)
 
     def keyhandler(self, event):
         if event.keysym == 'Return' or event.keysym == 'Right':
@@ -124,17 +127,6 @@ class Gui:
                 self.scrollbars(self.lsbox)
                 self.newState([self.state[0]])
 
-    def newState(self, state):
-        self.state = state
-        for i in range(2):
-            if i < len(state):
-                print(i, state[i])
-                self.lb[i].config(text=state[i])
-                self.lb[i].grid()
-            else:
-                print('-', i)
-                self.lb[i].grid_remove()
-
     def fillBackups(self, current=None):
         self.lsbox.delete(0, END)
         for name in sorted(self.logData.backups):
@@ -153,12 +145,6 @@ class Gui:
         self.yscrl.config(command=widget.yview)
         widget.configure(xscrollcommand=self.xscrl.set,
                          yscrollcommand=self.yscrl.set)
-
-
-# def copy(event):
-#     # values = [tree.item(i, 'text') for i in tree.selection()]
-#     root.clipboard_clear()
-#     # root.clipboard_append("\n".join(values))
 
 
 class DuplicatiLogData:
@@ -223,7 +209,6 @@ def readLog():
 
 def highlight_insert(text, line):
     try:
-        # raise RuntimeError
         if not re.search('(Ex|In)cluding path due to filter: ', line):
             raise RuntimeError
         match = re.search('(.*(?:Ex|In)cluding path due to filter: )(.*)( => \()(.*)(\))', line)
@@ -240,7 +225,6 @@ def highlight_insert(text, line):
             regex = re.sub(r"\\", r"\\\\", regex)
             regex.replace("*", ".*")
             regex.replace("?", ".")
-        # print(regex)
         match = re.search(regex, path, re.IGNORECASE)
         if not match:
             raise RuntimeError
