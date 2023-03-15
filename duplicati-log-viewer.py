@@ -54,18 +54,29 @@ class Gui:
         self.root.grid_rowconfigure(1, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
-        self.label = Label(self.root, anchor=W)
+        self.title = Frame(self.root)
+        style = {'anchor': W, 'relief': FLAT, 'bg': 'gray40', 'fg': '#ffffff'}
+        self.lb = [
+            Label(self.title, **style),
+            Label(self.title, **style),
+            Label(self.title,),
+        ]
         self.lsbox = Listbox(self.root, activestyle=NONE)
         self.textw = Text(self.root, wrap=NONE, font=("Arial", 9), relief=SOLID)
         self.yscrl = ttk.Scrollbar(self.root, orient=VERTICAL)
         self.xscrl = ttk.Scrollbar(self.root, orient=HORIZONTAL)
 
-        self.label.grid(row=0, column=0, sticky="nsew")
+        self.lb[0].grid(row=0, column=0, sticky="nsew")
+        self.lb[1].grid(row=0, column=1, sticky="nsew", padx=10)
+        self.lb[2].grid(row=0, column=2, sticky="nsew", padx=10)
+        self.title.grid(row=0, column=0, columnspan=2, sticky="nsew")
         self.lsbox.grid(row=1, column=0, sticky="nsew")
         self.textw.grid(row=1, column=0, sticky="nsew")
         self.yscrl.grid(row=1, column=1, sticky="ns")
         self.xscrl.grid(row=2, column=0, sticky="ew")
         self.textw.grid_remove()
+        self.lb[0].grid_remove()
+        self.lb[1].grid_remove()
 
         self.lsbox.bind("<Key>", self.keyhandler)
         self.textw.bind("<Key>", self.keyhandler)
@@ -115,7 +126,14 @@ class Gui:
 
     def newState(self, state):
         self.state = state
-        self.label.config(text=" > ".join(state))
+        for i in range(2):
+            if i < len(state):
+                print(i, state[i])
+                self.lb[i].config(text=state[i])
+                self.lb[i].grid()
+            else:
+                print('-', i)
+                self.lb[i].grid_remove()
 
     def fillBackups(self, current=None):
         self.lsbox.delete(0, END)
