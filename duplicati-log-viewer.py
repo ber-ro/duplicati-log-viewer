@@ -55,12 +55,15 @@ class Gui:
         self.root.grid_columnconfigure(0, weight=1)
 
         self.title = Frame(self.root)
+        self.kbhlp = Label(self.root, text="Escape/Left: Go up, Enter/Right: Show item")
+        self.kbhlp.lower()
         self.lsbox = Listbox(self.root, activestyle=NONE)
         self.textw = Text(self.root, wrap=NONE, font=("Arial", 9), relief=SOLID)
         self.yscrl = ttk.Scrollbar(self.root, orient=VERTICAL)
         self.xscrl = ttk.Scrollbar(self.root, orient=HORIZONTAL)
 
-        self.title.grid(row=0, column=0, columnspan=2, sticky="nsew")
+        self.title.grid(row=0, column=0, columnspan=2, sticky="w")
+        self.kbhlp.grid(row=0, column=0, columnspan=2, sticky="e")
         self.lsbox.grid(row=1, column=0, sticky="nsew")
         self.textw.grid(row=1, column=0, sticky="nsew")
         self.yscrl.grid(row=1, column=1, sticky="ns")
