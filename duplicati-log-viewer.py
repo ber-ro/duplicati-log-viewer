@@ -153,6 +153,7 @@ class Gui:
 class DuplicatiLogData:
     def __init__(self, ):
         self.queue = deque()
+        self.backup = None
 
     def __enter__(self):
         return self
@@ -165,6 +166,7 @@ class DuplicatiLogData:
         if max != 0 and len(self.queue) >= max:
             self.queue.popleft()
         self.queue.append({'date': date, 'lines': [], 'tags': {}})
+        self.backup = self.queue[-1]
 
     def prepareData(self):
         self.backups = {}
@@ -188,8 +190,8 @@ class DuplicatiLogData:
         return tags
 
     def addLine(self, text):
-        if len(self.queue) != 0:
-            self.queue[-1]['lines'].append(text)
+        if self.backup:
+            self.backup['lines'].append(text)
 
 
 def readLog():
@@ -198,9 +200,10 @@ def readLog():
             for line in fh:
                 yield line
 
+    reStart = re.compile("\[.*-StartingOperation\]")
     with DuplicatiLogData() as logData:
         for line in lines():
-            match = re.search("\[.*-StartingOperation\]", line)
+            match = reStart.search(line)
             if match is not None:
                 match = re.search("^(.*?) *-? *\[.*-StartingOperation\](.*)", line)
                 logData.addBackup(match[1] + match[2])
@@ -244,7 +247,7 @@ def highlightInsert(text, line):
         text.insert(END, mid)
         text.insert(END, pattern)
         text.insert(END, post)
-    except NoFilter:
+    except: # NoFilter: # uncomment for debugging
         text.insert(END, line)
 
 
