@@ -115,7 +115,7 @@ class Gui:
                 self.scrollbars(self.textw)
                 for l in self.logData.getTags(self.state[0])[current]:
                     if not isIgnored(l):
-                        highlight_insert(self.textw, l)
+                        highlightInsert(self.textw, l)
                         self.textw.insert(END, "\n")
                 self.textw.delete("end-2c", END)  # delete last newline
                 self.textw.configure(state=DISABLED)
@@ -210,17 +210,23 @@ def readLog():
     return logData
 
 
-def highlight_insert(text, line):
+def highlightInsert(text, line):
+    class NoFilter(Exception):
+        pass
+
     try:
         if not re.search('(Ex|In)cluding path due to filter: ', line):
-            raise RuntimeError
+            raise NoFilter
         match = re.search('(.*(?:Ex|In)cluding path due to filter: )(.*)( => \()(.*)(\))', line)
         if not match:
-            raise RuntimeError
+            raise NoFilter
         pre, path, mid, pattern, post = match[1], match[2], match[3], match[4], match[5]
         if match := re.fullmatch('\[(.*)\]', pattern):
             regex = match[1]
-            regex = re.sub(r"^\.\*(/|\\\\)", "", regex)
+            if match := re.search(r'\(\?\<hl\>', regex):
+                regex = getNamedGroup(regex[match.end():])
+            else:
+                regex = re.sub(r"^\.\*(/|\\\\)", "", regex)
         else:
             regex = pattern
             # regex = re.sub(r"^\*(/|\\(?=[^\\]))", "", regex)
@@ -230,7 +236,7 @@ def highlight_insert(text, line):
             regex.replace("?", ".")
         match = re.search(regex, path, re.IGNORECASE)
         if not match:
-            raise RuntimeError
+            raise NoFilter
         text.insert(END, pre)
         text.insert(END, path[:match.start()])
         text.insert(END, path[match.start():match.end()], "highlight")
@@ -238,8 +244,29 @@ def highlight_insert(text, line):
         text.insert(END, mid)
         text.insert(END, pattern)
         text.insert(END, post)
-    except:
+    except NoFilter:
         text.insert(END, line)
+
+
+def getNamedGroup(string):
+    def escaped():
+        return prev == '\\' and prevprev != '\\'
+
+    flag = 1
+    result = prev = prevprev = ''
+    for c in string:
+        # if c == ')' and (prev != '\\' or prevprev == '\\'):
+        if c == ')' and not escaped():
+            flag -= 1
+        elif c == '(' and not escaped():
+            flag += 1
+        if flag:
+            result += c
+            prevprev = prev
+            prev = c
+        else:
+            break
+    return result
 
 
 def isIgnored(text):
