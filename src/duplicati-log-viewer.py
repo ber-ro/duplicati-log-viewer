@@ -1,3 +1,4 @@
+#! python3
 # Browse Duplicati log files
 # Copyright (C) 2022 Bernhard Rotter <bernhard.rotter@gmail.com>
 
@@ -55,7 +56,7 @@ class Gui:
         self.root.grid_columnconfigure(0, weight=1)
 
         self.title = Frame(self.root)
-        self.kbhlp = Label(self.root, text="Escape/Left: Go up, Enter/Right: Show item")
+        self.kbhlp = Label(self.root, text="Escape/Left: Parent, Enter/Right: Child")
         self.kbhlp.lower()
         self.lsbox = Listbox(self.root, activestyle=NONE)
         self.textw = Text(self.root, wrap=NONE, font=("Arial", 9), relief=SOLID)
