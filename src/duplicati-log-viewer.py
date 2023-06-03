@@ -227,9 +227,8 @@ def highlightInsert(text, line):
         pre, path, mid, pattern, post = match[1], match[2], match[3], match[4], match[5]
         if match := re.fullmatch('\[(.*)\]', pattern):
             regex = match[1]
-            if match := re.search(r'\(\?\<hl\>', regex):
-                regex = getNamedGroup(regex[match.end():])
-            else:
+            hl = HlMatcher(regex)
+            if not (regex := hl.getHlPatterns()):
                 regex = re.sub(r"^\.\*(/|\\\\)", "", regex)
         else:
             regex = pattern
@@ -252,25 +251,40 @@ def highlightInsert(text, line):
         text.insert(END, line)
 
 
-def getNamedGroup(string):
-    def escaped():
-        return prev == '\\' and prevprev != '\\'
+class HlMatcher:
+    def __init__(self, string):
+        self.string = string
+        self.index = 0
 
-    flag = 1
-    result = prev = prevprev = ''
-    for c in string:
-        # if c == ')' and (prev != '\\' or prevprev == '\\'):
-        if c == ')' and not escaped():
-            flag -= 1
-        elif c == '(' and not escaped():
-            flag += 1
-        if flag:
-            result += c
-            prevprev = prev
-            prev = c
-        else:
-            break
-    return result
+    def getHlPatterns(self,):
+        result = []
+        pattern = re.compile(r'\(\?\<hl\>')
+        while match := pattern.search(self.string, self.index):
+            self.index = match.end()
+            result.append(self.getNamedGroup())
+        return '|'.join(result)
+
+    def getNamedGroup(self,):
+        def escaped():
+            return prev == '\\' and prevprev != '\\'
+
+        flag = 1
+        result = prev = prevprev = ''
+        for self.index in range(self.index, len(self.string)):
+            c = self.string[self.index]
+            # if c == ')' and (prev != '\\' or prevprev == '\\'):
+            if c == ')' and not escaped():
+                flag -= 1
+            elif c == '(' and not escaped():
+                flag += 1
+            if flag:
+                result += c
+                prevprev = prev
+                prev = c
+            else:
+                ++self.index
+                break
+        return result
 
 
 def isIgnored(text):
