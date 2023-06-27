@@ -1,3 +1,6 @@
+> **Note**
+> This repo is archived because I do not use Duplicati any more (I switched to Restic).
+
 # duplicati-log-viewer
 
 Python script for browsing [Duplicati](https://www.duplicati.com/) log files.
